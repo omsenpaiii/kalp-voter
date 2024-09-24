@@ -2,32 +2,27 @@ import React, { useState, useEffect, useRef } from "react";
 import { useScroll, useTransform, motion } from "framer-motion";
 import { useKalpApi } from '@/app/hooks/useKalpApi';
 
-const ScrollViewSplitsB = (): React.ReactNode => {
+const ScrollViewSplitsA = (): React.ReactNode => {
   const { getCandidate, voteForCandidate } = useKalpApi();
+  
   const [candidates, setCandidates] = useState<{ [key: string]: number }>({
-    "Bobby Kennedy": 0,
+    "Donald Trump": 0,
   });
   const [loadingState, setLoadingState] = useState<{ [key: string]: 'voting' | null }>({});
-  const [popupMessage, setPopupMessage] = useState<string | null>(null); // State for pop-up message
   const [showConfirmPopup, setShowConfirmPopup] = useState(false); // State for confirmation pop-up
   const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null); // State for selected candidate
+  const [popupMessage, setPopupMessage] = useState<string | null>(null); // State for pop-up message
 
   const fetchVotes = async () => {
     try {
-      const data = await getCandidate("Bobby Kennedy");
-      const kennedyVotes = data.result.result.votes || 0; // Ensure a valid number is retrieved
+      const data = await getCandidate("Donald Trump");
+      const trumpVotes = data.result.result.votes || 0; // Ensure a valid number is retrieved
       setCandidates((prevState) => ({
         ...prevState,
-        "Bobby Kennedy": kennedyVotes,
-      }));
-
-      // Store the updated votes in localStorage
-      localStorage.setItem("votes", JSON.stringify({
-        ...candidates,
-        "Bobby Kennedy": kennedyVotes,
+        "Donald Trump": trumpVotes,
       }));
     } catch (err) {
-      console.error("Error fetching Kennedy votes:", err);
+      console.error("Error fetching Trump votes:", err);
     }
   };
 
@@ -40,56 +35,24 @@ const ScrollViewSplitsB = (): React.ReactNode => {
     if (!selectedCandidate) return;
     setLoadingState((prev) => ({ ...prev, [selectedCandidate]: 'voting' })); // Set loading state
 
-    // Dummy loading delay of 2 seconds
-    setTimeout(async () => {
-      try {
-        // Try to vote via server
-        await voteForCandidate(selectedCandidate);
-        console.log(`Server vote for ${selectedCandidate} was successful`);
+    try {
+      await voteForCandidate(selectedCandidate); // Vote for candidate
+      console.log(`Voted for ${selectedCandidate}`);
+      setPopupMessage(`Voting successful for candidate: ${selectedCandidate}`); // Show success message
+    } catch (err) {
+      console.error("Vote error:", err);
+      setPopupMessage(`Voting failed for candidate: ${selectedCandidate}. Please try again.`); // Show error message
+    } finally {
+      setLoadingState((prev) => ({ ...prev, [selectedCandidate]: null })); // Reset loading state
+      setShowConfirmPopup(false); // Hide confirmation pop-up
 
-        // After successful server vote, increment vote locally
-        updateLocalVotes(selectedCandidate);
-        setPopupMessage(`Voting successful for candidate: ${selectedCandidate}`); // Show success pop-up
-      } catch (err) {
-        console.warn(`Server failed to cast vote for ${selectedCandidate}, voting locally.`);
-
-        // Silently vote locally without notifying user of server error
-        updateLocalVotes(selectedCandidate);
-        setPopupMessage(`Voting successful locally for candidate: ${selectedCandidate}`); // Show local success pop-up
-      } finally {
-        setLoadingState((prev) => ({ ...prev, [selectedCandidate]: null })); // Reset loading state
-        setShowConfirmPopup(false); // Hide confirmation pop-up
-
-        // Hide pop-up after 3 seconds
-        setTimeout(() => setPopupMessage(null), 3000);
-      }
-    }, 2000); // Simulate a 2-second delay
-  };
-
-  const updateLocalVotes = (candidateName: string) => {
-    // Update local votes and retain in localStorage
-    setCandidates((prevState) => {
-      const updatedVotes = (prevState[candidateName] || 0) + 1; // Ensure votes are incremented from a valid number
-      const updatedCandidates = {
-        ...prevState,
-        [candidateName]: updatedVotes,
-      };
-
-      // Store updated votes in localStorage
-      localStorage.setItem("votes", JSON.stringify(updatedCandidates));
-
-      return updatedCandidates;
-    });
+      // Hide pop-up message after 3 seconds
+      setTimeout(() => setPopupMessage(null), 3000);
+    }
   };
 
   useEffect(() => {
-    // On page load, fetch votes from localStorage or server
-    const storedVotes = localStorage.getItem("votes");
-    if (storedVotes) {
-      setCandidates(JSON.parse(storedVotes)); // Load votes from localStorage
-    } else {
-      fetchVotes(); // Fetch from server if no local storage is available
-    }
+    fetchVotes(); // Fetch votes on page load
   }, []);
 
   const ref = useRef<HTMLDivElement>(null);
@@ -105,22 +68,22 @@ const ScrollViewSplitsB = (): React.ReactNode => {
   return (
     <div ref={ref} className="w-full h-[50vh] flex justify-between items-center">
       <motion.div style={{ y }} className="flex-1 h-full">
-        <h1 className="text-[3rem] font-bold uppercase text-left">Bobby Kennedy</h1>
-        <p className="font-normal text-left">Votes: {candidates["Bobby Kennedy"]}</p>
+        <h1 className="text-[3rem] font-bold uppercase text-left">Donald Trump</h1>
+        <p className="font-normal text-left">Votes: {candidates["Donald Trump"]}</p>
         <div className="w-full flex justify-start mt-5">
           <button
-            onClick={() => handleVote("Bobby Kennedy")}
-            disabled={loadingState["Bobby Kennedy"] === 'voting'}
+            onClick={() => handleVote("Donald Trump")}
+            disabled={loadingState["Donald Trump"] === 'voting'}
             className="p-5 px-10 rounded-full border-[0.25px] border-white"
           >
-            {loadingState["Bobby Kennedy"] === 'voting' ? "Loading..." : "Vote"}
+            {loadingState["Donald Trump"] === 'voting' ? "Loading..." : "Vote"}
           </button>
         </div>
       </motion.div>
 
       <motion.div style={{ rotate, x }} className="bg-white transition-all duration-300 ease-out origin-bottom-right rounded-2xl h-full flex-[1.5] flex justify-center items-center">
         <div className="w-full h-full flex justify-center items-center">
-          <img src={"/images/kennedy-image.jpeg"} alt="kennedy" className="w-full h-full object-cover rounded-2xl" />
+          <img src={"/images/trump-image.png"} alt="trump" className="w-full h-full object-cover rounded-2xl" />
         </div>
       </motion.div>
 
@@ -158,4 +121,4 @@ const ScrollViewSplitsB = (): React.ReactNode => {
   );
 };
 
-export default ScrollViewSplitsB;
+export default ScrollViewSplitsA;
